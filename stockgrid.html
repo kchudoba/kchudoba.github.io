@@ -1,0 +1,141 @@
+<html>
+   <head>
+      <meta content = "text/html; charset = ISO-8859-1" http-equiv = "content-type">
+	<style>
+	body{
+    background: black;
+    color: #ffffff;
+    font-family: "Bahnschrift Condensed";
+}
+#container {
+display:flex;
+flex-wrap: wrap;
+}
+.stock {
+	flex: 1;
+    background: red;
+    margin: 2px;
+    font-size: 23pt;
+	min-width:100px;
+}
+.history{
+font-size:10pt;
+}
+	</style>
+<script type = "application/javascript">
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function addStock(symbol){
+	
+	let high_week=0;
+	let low_week=90000;
+	
+	if(!document.getElementById(symbol)){
+		d=document.createElement("div");
+		d.id=symbol;
+		d.className="stock";
+		dr=document.createElement("div");
+		dr.id=symbol+"_r";
+		dr.className="realtime";
+		dh=document.createElement("div");
+		dh.id=symbol+"_h";
+		dh.className="history";
+		//create 2 divs inside the stock div, for real time data and for ranges
+		document.getElementById("container").appendChild(d);
+		d.appendChild(dr);
+		d.appendChild(dh);
+
+		
+		
+		fetch("https://api.nasdaq.com/api/quote/"+symbol+"/chart?assetclass=stocks&fromdate=2020-09-04&todate=2020-09-11")
+		.then(response => response.json())
+		.then(result => {
+			chart=result.data.chart;
+			for( datapoint of chart){
+				
+				high_week=Math.max(high_week,datapoint.z.high);
+				low_week=Math.min(low_week,datapoint.z.low);
+				document.getElementById(symbol+"_h").innerHTML=low_week+" - "+high_week;
+				//STORE THE LOW AND HIGH IN THE DOM NODE so it can be accessed for updating the range graph
+				//alert(datapoint.z.low);
+			}
+			//document.getElementById(symbol).innerHTML=symbol+"<br>"+parseFloat(price.replace("$","")).toFixed(2)+"<br>"+result.data.primaryData.percentageChange;	
+			
+
+	});
+				
+		
+	}
+
+
+	fetch('https://api.nasdaq.com/api/quote/'+symbol+'/info?assetclass=stocks')
+		.then(response => response.json())
+		.then(result => {
+			price=result.data.primaryData.lastSalePrice;
+			document.getElementById(symbol+"_r").innerHTML=symbol+"<br>"+parseFloat(price.replace("$","")).toFixed(2)+"<br>"+result.data.primaryData.percentageChange;	
+			change=parseFloat(result.data.primaryData.percentageChange);
+			if (change>0){
+				green=Math.min(parseInt(change*25.5),255);
+				document.getElementById(symbol).style.backgroundColor="rgb(0,"+green+",0)";
+			}else {
+				red=Math.min(parseInt(Math.abs(change)*25.5),255);
+				document.getElementById(symbol).style.backgroundColor="rgb("+red+",0,0)";
+			}
+
+	});
+
+}
+
+function addDelayed(symbols){
+if(symbols.length>0){
+	addStock(symbols.shift());
+	setTimeout( function(){
+		addDelayed(symbols);
+	},Math.floor(Math.random() * 1000));
+}
+}
+var winactive=true;
+function init(){
+	/*addStock("TSLA");
+	setTimeout(function(){
+			addStock("AMZN");
+			setTimeout(function(){
+				addStock("AAPL");
+				setTimeout(function(){
+					addStock("MSFT");
+					setTimeout(function(){addStock("NVDA");}, Math.floor(Math.random() * 1000));
+				}, Math.floor(Math.random() * 1000));
+			}, Math.floor(Math.random() * 1000));
+		}, Math.floor(Math.random() * 1000));
+	*/
+	if (winactive){
+		var symbolsa=["TSLA","AAPL","MSFT","AMZN","NVDA","NKLA","FB","AMD","NFLX","T","AVGO","INTC"];
+		addDelayed(symbolsa);
+		setTimeout(function(){init();}, 4000+Math.floor(Math.random() * 2000));
+
+	}
+}
+
+function blurred(){
+	winactive=false;
+}
+
+function active(){
+	winactive=true;
+	init();
+}
+	window.onfocus = active;
+	window.onblur = blurred;
+</script>
+	
+      <title>TRADING BOARD</title>
+   </head>
+	
+   <body text-align="center" onload="init()";>
+   <center><div id="container"></div>
+		
+   </body>
+		
+</html>
