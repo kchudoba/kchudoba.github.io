@@ -1,0 +1,258 @@
+<html>
+<head>
+ <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="stylesheet" href="dist/uPlot.min.css">
+<script src="dist/uPlot.iife.min.js"></script>
+<script type = "application/javascript">
+var ts=[];
+var cp=[];
+var u;
+
+function getSize() {
+	return {
+		width: window.innerWidth - 10,
+		height: window.innerHeight - 80,
+	}
+}
+
+function throttle(cb, limit) {
+	var wait = false;
+
+	return () => {
+		if (!wait) {
+			requestAnimationFrame(cb);
+			wait = true;
+			setTimeout(() => {
+				wait = false;
+			}, limit);
+		}
+	}
+}
+
+function plotChart(timestamps, priceseries){
+if(document.getElementById("chart1")){
+document.getElementById("chart1").remove();
+}
+	let data = [
+	  timestamps,    // x-values (timestamps)
+	  priceseries,    // y-values (series 1)
+	];
+	
+	let opts = {
+  title: "",
+  id: "chart1",
+  class: "my-chart",
+  ...getSize(),
+  //width: 1200,
+  //height: 500,
+  series: [
+    {},
+    {
+      // initial toggled state (optional)
+      show: true,
+
+      spanGaps: false,
+
+      // in-legend display
+      label: "Price",
+      value: (self, rawValue) => "$" + rawValue.toFixed(2) + " Change: "+ (((rawValue.toFixed(2)/priceseries[0])-1)*100).toFixed(2),
+
+      // series style
+      stroke: "red",
+      width: 1,
+      fill: "rgba(255, 0, 0, 0.3)",
+      //dash: [10, 5],
+    }
+  ],
+  scales: {
+					x: {
+						distr: 2,
+						
+					},
+					
+				},
+};
+
+let uplot = new uPlot(opts, data, document.body);
+return uplot;
+}
+///////////////////////////////
+
+Array.prototype.vectorAdd = function(other){
+var result = []
+    for(var i = 0; i < this.length; i++) {
+        result.push( this[i] + other[i])
+    }
+
+    return result;
+}
+Array.prototype.cleanNull = function(){
+//var result = []
+    for(var i = 0; i < this.length; i++) {
+        if( !this[i] ) this[i]=this[i-1];
+    }
+return this;
+}
+
+var portfolioArray = [];
+var timestp =[];
+
+var range=1;
+var gran="1m";
+
+
+
+function getAllStocks(symbols){
+
+	var promises = [];
+	for( s of symbols){
+		promises.push(fetch("https://query1.finance.yahoo.com/v8/finance/chart/"+s[0]+"?interval="+gran+"&range="+range+"d&includePrePost=false"));
+	}
+	
+	Promise.all(promises).then(function (responses) {
+	// Get a JSON object from each of the responses
+		return Promise.all(responses.map(function (response) {
+			return response.json();
+	}));
+	}).then(function (data) {
+	// Log the data to the console
+	// You would do something with both sets of data here
+		for(i=0; i<data.length; i++){
+			if(timestp.length==0) timestp=data[i].chart.result[0].timestamp;
+			cp=data[i].chart.result[0].indicators.quote[0].close;
+			cp.cleanNull();
+			if(portfolioArray.length==0) portfolioArray = cp.map(x => x * symbols[i][1]);
+			else portfolioArray=portfolioArray.vectorAdd(cp.map(x => x * symbols[i][1]));
+		}
+		u=plotChart(timestp,portfolioArray);
+	
+	//console.log(data);
+	}).catch(function (error) {
+	// if there's an error, log it
+	console.log(error);
+	});
+
+}
+
+/*
+function addStock(symbol){
+	
+
+
+
+	fetch("https://query1.finance.yahoo.com/v8/finance/chart/"+symbol[0]+"?interval="+gran+"&range="+range+"d&includePrePost=false")
+		.then(response => response.json())
+		.then(result => {
+			if(timestp.length==0) timestp=result.chart.result[0].timestamp;
+			cp=result.chart.result[0].indicators.quote[0].close;
+			cp.cleanNull();
+			if(portfolioArray.length==0) portfolioArray = cp.map(x => x * symbol[1]);
+			else portfolioArray=portfolioArray.vectorAdd(cp.map(x => x * symbol[1]));
+			plotChart(timestp,portfolioArray);
+
+	});
+
+}
+
+function addDelayed(symbols){
+if(symbols.length>0){
+	addStock(symbols.shift());
+	setTimeout( function(){
+		addDelayed(symbols);
+	},Math.floor(Math.random() * 1000));
+}
+}
+
+*/
+
+function init(){
+
+portfolioArray = [];
+timestp =[];
+	range=parseInt(document.getElementById("period").value);
+	gran=document.getElementById("gran").value;
+	//var symbolsa=["TSLA","AAPL","MSFT","AMZN","NVDA","NKLA","FB","AMD","NFLX","T","AVGO","INTC"];
+	var symbolsa=[
+	["TSLA",4],
+	["AAPL",80],
+	["T",20],
+	["AMZN",1],
+	["AVGO",6],
+	["BAC",50],
+	["KO",15],
+	["DAL",40],
+	["XOM",30],
+	["INTC",10],
+	["MCD",10],
+	["MSFT",40],
+	["NVDA",4],
+	["NFLX",2]
+	];
+	//addDelayed(symbolsa);
+	// TRY WITH PROMISE.ALL
+	symbolsa=JSON.parse(document.getElementById("symb").value);
+	getAllStocks(symbolsa);
+	//setTimeout(function(){init();}, 4000+Math.floor(Math.random() * 2000));
+}
+
+
+
+
+///////////////////
+function loadJSON() {
+			var now=new Date();
+			now=parseInt(now.getTime()/1000);
+			var range=parseInt(document.getElementById("period").value*86400);
+			var gran=document.getElementById("gran").value;
+			var symb=document.getElementById("symb").value;
+
+			var from=now-range;
+            var data_file = "https://query1.finance.yahoo.com/v7/finance/chart/TSLA?interval=1m&range=1d";
+			var data_file = "https://query1.finance.yahoo.com/v8/finance/chart/"+symb+"?period1="+from+"&period2="+now+"&interval="+gran+"&includePrePost=true"
+            var http_request = new XMLHttpRequest();
+            try{
+               // Opera 8.0+, Firefox, Chrome, Safari
+               http_request = new XMLHttpRequest();
+            }catch (e) {
+               // Internet Explorer Browsers
+               try{
+                  http_request = new ActiveXObject("Msxml2.XMLHTTP");
+					
+               }catch (e) {
+				
+                  try{
+                     http_request = new ActiveXObject("Microsoft.XMLHTTP");
+                  }catch (e) {
+                     // Something went wrong
+                     alert("Your browser broke!");
+                     return false;
+                  }
+					
+               }
+            }
+			
+            http_request.onreadystatechange = function() {
+			
+               if (http_request.readyState == 4  ) {
+                  // Javascript function JSON.parse to parse JSON data
+                  var jsonObj = JSON.parse(http_request.responseText);
+					ts=jsonObj.chart.result[0].timestamp;
+					cp=jsonObj.chart.result[0].indicators.quote[0].close;
+					
+					plotChart(ts, cp);
+               }
+            }
+			
+            http_request.open("GET", data_file, true);
+            http_request.send();
+         }
+	
+			window.addEventListener("resize", throttle(() => u.setSize(getSize()), 100));
+
+</script>
+
+</head>
+<body onload="init()">
+<input type="text" id="period" onblur="init()" value="1" size="3"/><input type="text" id="gran" onblur="init()" value="1m" size="3"/>
+<input type="text" id="symb" onblur="init()" size="150" value='[["TSLA",4],["AAPL",80],["T",20],["AMZN",1],["AVGO",6],["BAC",50],["KO",15],["DAL",40],["XOM",30],["INTC",10],["MCD",10],["MSFT",40],["NVDA",4],["NFLX",2]]'/>
+</body>
