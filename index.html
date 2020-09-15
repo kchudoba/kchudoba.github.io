@@ -106,7 +106,7 @@ function getAllStocks(symbols){
 
 	var promises = [];
 	for( s of symbols){
-		promises.push(fetch("https://query1.finance.yahoo.com/v8/finance/chart/"+s[0]+"?interval="+gran+"&range="+range+"d&includePrePost=false"));
+		promises.push(fetch("https://jsonp.afeld.me/?url=https://query1.finance.yahoo.com/v8/finance/chart/"+s[0]+"?interval="+gran+"&range="+range+"d&includePrePost=false"));
 	}
 	
 	Promise.all(promises).then(function (responses) {
