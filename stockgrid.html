@@ -70,7 +70,7 @@ function addStock(symbol){
 	}
 
 
-	fetch('https://api.nasdaq.com/api/quote/'+symbol+'/info?assetclass=stocks')
+	fetch('https://jsonp.afeld.me/?url=https://api.nasdaq.com/api/quote/'+symbol+'/info?assetclass=stocks')
 		.then(response => response.json())
 		.then(result => {
 			price=result.data.primaryData.lastSalePrice;
