@@ -49,7 +49,7 @@ function addStock(symbol){
 
 		
 		
-		fetch("https://api.nasdaq.com/api/quote/"+symbol+"/chart?assetclass=stocks&fromdate=2020-09-04&todate=2020-09-11")
+		fetch("https://jsonp.afeld.me/?url=https://api.nasdaq.com/api/quote/"+symbol+"/chart?assetclass=stocks&fromdate=2020-09-04&todate=2020-09-11")
 		.then(response => response.json())
 		.then(result => {
 			chart=result.data.chart;
