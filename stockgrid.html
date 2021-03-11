@@ -1,25 +1,35 @@
 <html>
    <head>
       <meta content = "text/html; charset = ISO-8859-1" http-equiv = "content-type">
-	<style>
+	  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Oswald&display=swap" rel="stylesheet">	<style>
 	body{
     background: black;
     color: #ffffff;
-    font-family: "Bahnschrift Condensed";
+    font-family: 'Oswald', sans-serif;
 }
 #container {
 display:flex;
 flex-wrap: wrap;
 }
+
 .stock {
 	flex: 1;
     background: red;
     margin: 2px;
-    font-size: 23pt;
+    font-size: 17pt;
 	min-width:100px;
 }
+.realtime{
+--font-family:"Helvetica";
+--font-weight: bold;
+}
 .history{
-font-size:10pt;
+font-size:8pt;
+--display:none;
+}
+table{
+font-size:8pt;
 }
 	</style>
 <script type = "application/javascript">
@@ -27,64 +37,73 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function addStock(symbol){
+function toggle(e){
+ele=this;
+    eleStyle = window.getComputedStyle(ele);
+console.log(e);
+/* Below is the width of ele */
+var eleminWidth = eleStyle.minWidth;
+	//alert(this.id);
+	if(eleStyle.minWidth=="100px"){
+		this.style.minWidth="300px";
+		this.style.order=-1;
+	}else {
+		this.style.minWidth="";
+		this.style.order=0;
+	}
+}
+
+function addStock(quote){
 	
-	let high_week=0;
-	let low_week=90000;
-	
-	if(!document.getElementById(symbol)){
+	//let high_week=0;
+	//let low_week=90000;
+	d=document.getElementById(quote.symbol);
+	if(!d){
 		d=document.createElement("div");
-		d.id=symbol;
+		d.id=quote.symbol;
 		d.className="stock";
 		dr=document.createElement("div");
-		dr.id=symbol+"_r";
+		dr.id=quote.symbol+"_r";
 		dr.className="realtime";
 		dh=document.createElement("div");
-		dh.id=symbol+"_h";
+		dh.id=quote.symbol+"_h";
 		dh.className="history";
 		//create 2 divs inside the stock div, for real time data and for ranges
 		document.getElementById("container").appendChild(d);
 		d.appendChild(dr);
 		d.appendChild(dh);
-
-		
-		
-		fetch("https://jsonp.afeld.me/?url=https://api.nasdaq.com/api/quote/"+symbol+"/chart?assetclass=stocks&fromdate=2020-09-04&todate=2020-09-11")
-		.then(response => response.json())
-		.then(result => {
-			chart=result.data.chart;
-			for( datapoint of chart){
-				
-				high_week=Math.max(high_week,datapoint.z.high);
-				low_week=Math.min(low_week,datapoint.z.low);
-				document.getElementById(symbol+"_h").innerHTML=low_week+" - "+high_week;
-				//STORE THE LOW AND HIGH IN THE DOM NODE so it can be accessed for updating the range graph
-				//alert(datapoint.z.low);
-			}
-			//document.getElementById(symbol).innerHTML=symbol+"<br>"+parseFloat(price.replace("$","")).toFixed(2)+"<br>"+result.data.primaryData.percentageChange;	
-			
-
-	});
-				
-		
+		d.appendChild(document.createElement("div")).className="history";
+		d.onclick=toggle;
 	}
+	if(d){
+	
+		if(quote.marketState=="PRE" && quote.preMarketPrice){
+			price= quote.preMarketPrice;
+			change=quote.preMarketChangePercent;
+		}else if( quote.postMarketPrice){
+			price= quote.postMarketPrice;
+			change=quote.postMarketChangePercent;
+		}
+		else{
+			price= quote.regularMarketPrice;
+			change=quote.regularMarketChangePercent;
+		}
+		d.children[0].innerHTML=quote.symbol + "<br>" + price.toFixed(2) + "<br>" + change.toFixed(2)+"%";
 
+		d.children[1].innerHTML="D: "+ quote.regularMarketDayRange+"<br>52w: "+quote.fiftyTwoWeekRange ;
+		d.children[2].innerHTML="<table><tr><td>50da: </td><td>"+quote.fiftyDayAverage.toFixed(2) +" </td><td> " + (100*quote.fiftyDayAverageChangePercent).toFixed(2)+"%</td></tr></table>";
+		
 
-	fetch('https://jsonp.afeld.me/?url=https://api.nasdaq.com/api/quote/'+symbol+'/info?assetclass=stocks')
-		.then(response => response.json())
-		.then(result => {
-			price=result.data.primaryData.lastSalePrice;
-			document.getElementById(symbol+"_r").innerHTML=symbol+"<br>"+parseFloat(price.replace("$","")).toFixed(2)+"<br>"+result.data.primaryData.percentageChange;	
-			change=parseFloat(result.data.primaryData.percentageChange);
+		
 			if (change>0){
 				green=Math.min(parseInt(change*25.5),255);
-				document.getElementById(symbol).style.backgroundColor="rgb(0,"+green+",0)";
+				d.style.backgroundColor="rgb(0,"+green+",0)";
 			}else {
 				red=Math.min(parseInt(Math.abs(change)*25.5),255);
-				document.getElementById(symbol).style.backgroundColor="rgb("+red+",0,0)";
+				d.style.backgroundColor="rgb("+red+",0,0)";
 			}
-
-	});
+	}
+				
 
 }
 
@@ -96,23 +115,29 @@ if(symbols.length>0){
 	},Math.floor(Math.random() * 1000));
 }
 }
+
+
 var winactive=true;
 function init(){
-	/*addStock("TSLA");
-	setTimeout(function(){
-			addStock("AMZN");
-			setTimeout(function(){
-				addStock("AAPL");
-				setTimeout(function(){
-					addStock("MSFT");
-					setTimeout(function(){addStock("NVDA");}, Math.floor(Math.random() * 1000));
-				}, Math.floor(Math.random() * 1000));
-			}, Math.floor(Math.random() * 1000));
-		}, Math.floor(Math.random() * 1000));
-	*/
+
 	if (winactive){
-		var symbolsa=["TSLA","AAPL","MSFT","AMZN","NVDA","NKLA","FB","AMD","NFLX","T","AVGO","INTC"];
-		addDelayed(symbolsa);
+	
+
+		fetch('https://jsonp.afeld.me/?url=https://query1.finance.yahoo.com/v7/finance/quote'+window.location.search)
+		.then(response => response.json())
+		.then(result => {
+			quotes=result.quoteResponse.result;
+			for(quote of quotes){
+				addStock(quote);
+			}
+			
+			
+
+	});
+	
+	
+
+		
 		setTimeout(function(){init();}, 4000+Math.floor(Math.random() * 2000));
 
 	}
@@ -120,6 +145,7 @@ function init(){
 
 function blurred(){
 	winactive=false;
+	//alert("blurred");
 }
 
 function active(){
@@ -128,6 +154,10 @@ function active(){
 }
 	window.onfocus = active;
 	window.onblur = blurred;
+	
+	if(window.location.search=="") window.location.search="?symbols=TSLA,AAPL,MSFT,AMZN,NVDA,NFLX,T,AVGO,INTC,WMT,FB"
+	//alert(window.visualViewport.width + "x"+window.visualViewport.height);
+	
 </script>
 	
       <title>TRADING BOARD</title>

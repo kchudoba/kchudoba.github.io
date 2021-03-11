@@ -1,0 +1,211 @@
+<html>
+<head>
+<style>
+table {
+  border-collapse: collapse;
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+.plot{
+width:700px;
+height:600px;
+}
+</style>
+<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<script type = "application/javascript">
+//symbol="AAPL";
+interval="1d";
+
+function regularMSaver(ts,open,close,high,low,dofm=1,budget=1000){
+let invested=0;
+let sharesowned=0;
+let lastmonthbought=-1;
+
+let firstdomindata=(new Date(ts[0]*1000)).getDate();
+if(firstdomindata>dofm) lastmonthbought=(new Date(ts[0]*1000)).getFullYear()*12+(new Date(ts[0]*1000)).getMonth();
+//buy at x day of month or ASAP after
+	for (let i=0; i<ts.length; i++){
+		let date=new Date(ts[i]*1000);
+		tsdom=date.getDate();
+		if(lastmonthbought<date.getFullYear()*12+date.getMonth() && tsdom>=dofm){
+			invested+=Math.floor(budget/close[i])*close[i];
+			sharesowned+=Math.floor(budget/close[i]);
+			lastmonthbought=date.getFullYear()*12+date.getMonth();
+		}
+	}
+	return	{"performance": (100*(sharesowned*close[ts.length-1] - invested)/invested).toFixed(2),
+			 "invested": invested.toFixed(2),
+			 "shares": sharesowned,
+			 "profit": (sharesowned*close[ts.length-1] - invested).toFixed(2),
+			 "dayOfMonth": dofm,
+			 "budget": budget};
+}
+
+function runStrategies(timestp,open,close,high,low, sym){
+
+
+	for(i=1;i<31;i++)	console.log(sym+": "+JSON.stringify(regularMSaver(timestp,open,close,high,low,i)));
+
+	for(p=130;p<150;p++){//period in days
+		for(d=0;d<0.45;d+=0.005){
+			//results+=buyDip(timestp,open,close,high,low,d,p);
+			sresult=buyDip(timestp,open,close,high,low,d,p);
+			if(sresult.shares>20) console.log(sym+": "+JSON.stringify(sresult));
+		}
+	}
+
+
+
+
+let aRes=[];
+let aPer=[];
+let aDip=[];
+let aShares=[];
+	
+	results="";
+	for(p=1;p<300;p++){//period in days
+		for(d=0;d<0.45;d+=0.005){
+			//results+=buyDip(timestp,open,close,high,low,d,p);
+			sresult=buyDip(timestp,open,close,high,low,d,p);
+			if(sresult[1]>10){
+			aRes.push(sresult[0]);
+			aPer.push(p);
+			aDip.push(d*100);
+			aShares.push(sresult[1]);
+			}
+			if(sresult[0]>280) console.log(sym+", p: "+p+", d: "+(d*100).toFixed(0)+", res: "+sresult);
+		}
+	}
+
+	
+	var data=[
+    {
+     opacity:1,
+     type: 'scatter3d',
+     x: aPer,
+     y: aDip,
+     z: aRes,
+	 
+	 mode: 'markers',
+	 marker:{
+	 size:aShares,
+	 sizemin:1,
+	 sizemode:"area",
+	 opacity:1,
+	 colorscale: "Plasma", 
+	 reversescale: false,
+	 autocolorscale: false,
+	 color:aRes,
+	 },
+	 
+    }
+];
+var layout = {
+	margin:{
+	l:0,
+	r:0,
+	t:0,
+	b:0
+	},
+  scene:{
+	 aspectmode: "manual",
+   aspectratio: {
+     x: 1, y: 1, z: 1,
+    },
+	camera:{
+	up:{x: 0, y: 0, z: 1},
+	eye:{x: 1, y: 1, z: 1},
+	},
+   xaxis: {
+	title:"days",
+    nticks: 9,
+    range: [0, 300],
+  },
+   yaxis: {
+    nticks: 7,
+	title:"dip %",
+    range: [0, 40],
+  },
+   zaxis: {
+   nticks: 10,
+   title:"profit %",
+   range: [0, 500],
+  }},
+};
+d=document.createElement("div");
+d.id=sym;
+d.className="plot";
+document.body.appendChild(d);
+Plotly.newPlot(sym, data, layout);
+	/**/
+	
+	//document.body.innerHTML+="<table><tr><td>Strategy on "+sym+"</td><td>Invested</td><td>shares</td><td>value</td><td>P/L %</td></tr>"+results+"</table>";
+}
+
+
+function buyDip(ts,open,close,high,low,dip,p=1){
+	
+	
+	let invested=0;
+	let sharesowned=0;
+	let boughtDates=[];
+
+  
+	for (i=p; i<ts.length; i++){
+		if((close[i-p]-low[i])/close[i-p]>=dip){
+		
+			//buy 1 stock for the price x% below prev close
+			
+			invested+=close[i-p]-close[i-p]*dip;
+			sharesowned++;
+			boughtDates.push(new Date(ts[i]*1000).toJSON().slice(0,10));
+		
+		}
+	}
+  let profit=sharesowned<1? 0 : (100*(sharesowned*close[ts.length-1] - invested)/invested).toFixed(2);
+	
+	return 	{"performance": sharesowned<1? 0 :(100*(sharesowned*close[ts.length-1] - invested)/invested).toFixed(2),
+			 "invested": invested.toFixed(2),
+			 "shares": sharesowned,
+			 "profit": (sharesowned*close[ts.length-1] - invested).toFixed(2),
+			 "dip": dip*100,
+			 "period": p,
+			 "bougtOn": boughtDates};
+	//return "<tr><td>buyDip period: "+p+"d, dip: "+(100*dip).toFixed(2)+"%</td><td>"+invested.toFixed(2) +"</td><td>"+ sharesowned +"</td><td>"+ (sharesowned*close[ts.length-1]).toFixed(2)+"</td><td>"+ (100*(sharesowned*close[ts.length-1] - invested)/invested).toFixed(1) + "%</td></tr>";
+
+	
+}
+
+
+function load(symbol){
+fetch("https://jsonp.afeld.me/?url="+ encodeURIComponent("https://query1.finance.yahoo.com/v8/finance/chart/"+symbol+"?interval="+interval+"&range=2y&includePrePost=false"))
+		.then(response => response.json())
+		.then(result => {
+			timestp=result.chart.result[0].timestamp;
+			close=result.chart.result[0].indicators.quote[0].close;
+			open=result.chart.result[0].indicators.quote[0].open;
+			high=result.chart.result[0].indicators.quote[0].high;
+			low=result.chart.result[0].indicators.quote[0].low;
+			//closeprices.cleanNull();
+			runStrategies(timestp,open,close,high,low,symbol);
+			
+			
+	});
+	
+}
+
+function start(){
+	load("AAPL");
+	//load("MSFT");
+	//load("NVDA");
+}
+</script>
+
+
+</head>
+<body onload="start()">
+<!-- <div id="myDiv" style="width:1000px;height:800px"></div>-->
+</body>
+</html>
