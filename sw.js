@@ -81,9 +81,10 @@ async function handleRequest(request) {
   // request = request.clone();
   // request.headers.set("Origin", "https://finance.yahoo.com")
   let response = await fetch(request)
+  var init = { "status" : 200 };
 
   // Recreate the response so we can modify the headers
-  response = new Response(response.body, response)
+  response = new Response(response.body,init)
 
   // Set CORS headers
   response.headers.set("Access-Control-Allow-Origin", "*")
