@@ -78,8 +78,8 @@ async function handleRequest(request) {
   // Rewrite request to point to API url. This also makes the request mutable
   // so we can add the correct Origin header to make the API server think
   // that this request isn't cross-site.
-  request = request.clone();
-  request.headers.set("Origin", "https://finance.yahoo.com")
+  // request = request.clone();
+  // request.headers.set("Origin", "https://finance.yahoo.com")
   let response = await fetch(request)
 
   // Recreate the response so we can modify the headers
